@@ -16,22 +16,30 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import type { Tables, TablesInsert } from "@/lib/database.types";
+import type { Tables } from "@/lib/database.types";
 import { supabase } from "@/lib/supabase";
 
-type QueueRow = Tables<{ schema: "restaurant_queue" }, "queue_entries">;
-type QueueInsert = TablesInsert<{ schema: "restaurant_queue" }, "queue_entries">;
+type QueueRow = Tables<{ schema: "public" }, "queue_entries">;
+type QueueInsert = {
+  name: string;
+  phone: string;
+  party_size: number;
+  note?: string | null;
+  status?: string;
+  source?: string;
+  updated_at?: string;
+};
 type QueueSelectedRow = Pick<QueueRow, "id" | "name" | "phone" | "party_size" | "note" | "joined_at" | "status" | "source">;
 type QueueStatus = QueueRow["status"];
 type QueueSource = QueueRow["source"];
 
 type QueueEntry = {
-  id: QueueRow["id"];
-  name: QueueRow["name"];
-  phone: QueueRow["phone"];
-  partySize: QueueRow["party_size"];
-  note?: QueueRow["note"];
-  joinedAt: QueueRow["joined_at"];
+  id: string;
+  name: string;
+  phone: string;
+  partySize: number;
+  note?: string | null;
+  joinedAt: string;
   status: QueueStatus;
   source: QueueSource;
 };
@@ -74,14 +82,14 @@ function formatTime(value: string) {
 
 function fromRow(row: QueueSelectedRow): QueueEntry {
   return {
-    id: row.id,
-    name: row.name,
-    phone: row.phone,
-    partySize: row.party_size,
+    id: row.id ?? crypto.randomUUID(),
+    name: row.name ?? "Unknown guest",
+    phone: row.phone ?? "",
+    partySize: row.party_size ?? 1,
     note: row.note,
-    joinedAt: row.joined_at,
-    status: row.status,
-    source: row.source,
+    joinedAt: row.joined_at ?? new Date(0).toISOString(),
+    status: (row.status ?? "waiting") as QueueStatus,
+    source: (row.source ?? "qr") as QueueSource,
   };
 }
 
