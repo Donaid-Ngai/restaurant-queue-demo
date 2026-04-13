@@ -16,21 +16,22 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { FormEvent, useMemo, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
-type QueueStatus = "waiting" | "seated";
+type QueueStatus = "waiting" | "seated" | "removed";
+
+type QueueSource = "qr" | "walk-in" | "staff";
 
 type QueueEntry = {
   id: string;
   name: string;
   phone: string;
   partySize: number;
-  note?: string;
+  note?: string | null;
   joinedAt: string;
   status: QueueStatus;
-  source: "qr" | "walk-in";
+  source: QueueSource;
 };
-
-const STORAGE_KEY = "restaurant-queue-demo";
 
 const seedQueue: QueueEntry[] = [
   {
@@ -53,35 +54,7 @@ const seedQueue: QueueEntry[] = [
     status: "waiting",
     source: "walk-in",
   },
-  {
-    id: "q3",
-    name: "Alex Rivera",
-    phone: "555-0126",
-    partySize: 3,
-    joinedAt: new Date(Date.now() - 1000 * 60 * 4).toISOString(),
-    status: "seated",
-    source: "qr",
-  },
 ];
-
-function loadQueue(): QueueEntry[] {
-  if (typeof window === "undefined") return seedQueue;
-  const raw = window.localStorage.getItem(STORAGE_KEY);
-  if (!raw) {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(seedQueue));
-    return seedQueue;
-  }
-
-  try {
-    return JSON.parse(raw) as QueueEntry[];
-  } catch {
-    return seedQueue;
-  }
-}
-
-function saveQueue(queue: QueueEntry[]) {
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(queue));
-}
 
 function formatWait(joinedAt: string) {
   const minutes = Math.max(0, Math.round((Date.now() - new Date(joinedAt).getTime()) / 60000));
@@ -96,8 +69,32 @@ function formatTime(value: string) {
   }).format(new Date(value));
 }
 
+function fromRow(row: {
+  id: string;
+  name: string;
+  phone: string;
+  party_size: number;
+  note: string | null;
+  joined_at: string;
+  status: QueueStatus;
+  source: QueueSource;
+}): QueueEntry {
+  return {
+    id: row.id,
+    name: row.name,
+    phone: row.phone,
+    partySize: row.party_size,
+    note: row.note,
+    joinedAt: row.joined_at,
+    status: row.status,
+    source: row.source,
+  };
+}
+
 export function QueueApp() {
-  const [queue, setQueue] = useState<QueueEntry[]>(() => loadQueue());
+  const [queue, setQueue] = useState<QueueEntry[]>(supabase ? [] : seedQueue);
+  const [isLoading, setIsLoading] = useState(Boolean(supabase));
+  const [error, setError] = useState<string | null>(supabase ? null : "Supabase env is missing, showing local demo data.");
   const [guestName, setGuestName] = useState("");
   const [guestPhone, setGuestPhone] = useState("");
   const [guestPartySize, setGuestPartySize] = useState("2");
@@ -116,59 +113,116 @@ export function QueueApp() {
     [queue],
   );
 
-  const updateQueue = (next: QueueEntry[]) => {
-    setQueue(next);
-    saveQueue(next);
-  };
+  async function fetchQueue() {
+    if (!supabase) {
+      setQueue(seedQueue);
+      setError("Supabase env is missing, showing local demo data.");
+      setIsLoading(false);
+      return;
+    }
 
-  const handleGuestSubmit = (event: FormEvent) => {
+    setIsLoading(true);
+    const { data, error: fetchError } = await supabase
+      .schema("restaurant_queue")
+      .from("queue_entries")
+      .select("id, name, phone, party_size, note, joined_at, status, source")
+      .neq("status", "removed")
+      .order("joined_at", { ascending: true });
+
+    if (fetchError) {
+      setError(fetchError.message);
+      setQueue(seedQueue);
+    } else {
+      setError(null);
+      setQueue((data ?? []).map(fromRow));
+    }
+    setIsLoading(false);
+  }
+
+  if (supabase && isLoading && queue.length === 0 && !error) {
+    void fetchQueue();
+  }
+
+  const handleGuestSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!guestName.trim() || !guestPhone.trim()) return;
+    if (!supabase) return;
 
-    const entry: QueueEntry = {
-      id: crypto.randomUUID(),
+    const { error: insertError } = await supabase.schema("restaurant_queue").from("queue_entries").insert({
       name: guestName.trim(),
       phone: guestPhone.trim(),
-      partySize: Number(guestPartySize) || 1,
-      note: guestNote.trim(),
-      joinedAt: new Date().toISOString(),
+      party_size: Number(guestPartySize) || 1,
+      note: guestNote.trim() || null,
       status: "waiting",
       source: "qr",
-    };
+    });
 
-    updateQueue([...queue, entry]);
+    if (insertError) {
+      setError(insertError.message);
+      return;
+    }
+
     setGuestName("");
     setGuestPhone("");
     setGuestPartySize("2");
     setGuestNote("");
+    fetchQueue();
   };
 
-  const handleStaffAdd = (event: FormEvent) => {
+  const handleStaffAdd = async (event: FormEvent) => {
     event.preventDefault();
     if (!staffName.trim() || !staffPhone.trim()) return;
+    if (!supabase) return;
 
-    const entry: QueueEntry = {
-      id: crypto.randomUUID(),
+    const { error: insertError } = await supabase.schema("restaurant_queue").from("queue_entries").insert({
       name: staffName.trim(),
       phone: staffPhone.trim(),
-      partySize: Number(staffPartySize) || 1,
-      joinedAt: new Date().toISOString(),
+      party_size: Number(staffPartySize) || 1,
       status: "waiting",
       source: "walk-in",
-    };
+    });
 
-    updateQueue([...queue, entry]);
+    if (insertError) {
+      setError(insertError.message);
+      return;
+    }
+
     setStaffName("");
     setStaffPhone("");
     setStaffPartySize("2");
+    fetchQueue();
   };
 
-  const markSeated = (id: string) => {
-    updateQueue(queue.map((entry) => (entry.id === id ? { ...entry, status: "seated" } : entry)));
+  const markSeated = async (id: string) => {
+    if (!supabase) return;
+    const { error: updateError } = await supabase
+      .schema("restaurant_queue")
+      .from("queue_entries")
+      .update({ status: "seated", updated_at: new Date().toISOString() })
+      .eq("id", id);
+
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
+
+    fetchQueue();
   };
 
-  const removeEntry = (id: string) => {
-    updateQueue(queue.filter((entry) => entry.id !== id));
+  const removeEntry = async (id: string) => {
+    if (!supabase) return;
+    const { error: updateError } = await supabase
+      .schema("restaurant_queue")
+      .from("queue_entries")
+      .update({ status: "removed", updated_at: new Date().toISOString() })
+      .eq("id", id);
+
+    if (updateError) {
+      setError(updateError.message);
+      return;
+    }
+
+    fetchQueue();
   };
 
   return (
@@ -181,13 +235,14 @@ export function QueueApp() {
                 <Badge colorPalette="green" width="fit-content">Restaurant queue demo</Badge>
                 <Heading size="2xl">One app, two views, quick prototype.</Heading>
                 <Text color="gray.300" maxW="3xl">
-                  Guests join from a QR code landing page, staff manage the line from the dashboard, and the whole demo runs client-side for fast iteration.
+                  Guests join from a QR code landing page, staff manage the line from the dashboard, and now both views use the shared Supabase demo database.
                 </Text>
+                {error && <Text color="orange.300">{error}</Text>}
               </Stack>
               <Grid templateColumns="repeat(3, minmax(0, 1fr))" gap={3} minW={{ md: "320px" }}>
                 <StatCard label="Waiting" value={String(waiting.length)} helper="active guests" />
                 <StatCard label="Seated" value={String(seated.length)} helper="served today" />
-                <StatCard label="Avg wait" value={waiting[0] ? formatWait(waiting[0].joinedAt) : "0 min"} helper="front of line" />
+                <StatCard label="Status" value={isLoading ? "Syncing" : "Live"} helper="Supabase" />
               </Grid>
             </Flex>
           </Card.Body>
@@ -210,7 +265,7 @@ export function QueueApp() {
                   <Input placeholder="Optional note" value={guestNote} onChange={(e) => setGuestNote(e.target.value)} size="lg" />
 
                   <Button type="submit" colorPalette="green" size="lg">Join queue</Button>
-                  <Text textStyle="sm" color="gray.500">Demo behavior only. Entries are stored in local browser storage.</Text>
+                  <Text textStyle="sm" color="gray.500">This version writes to the shared Supabase demo project.</Text>
                 </Stack>
               </Card.Body>
             </Card.Root>
@@ -218,8 +273,8 @@ export function QueueApp() {
             <Card.Root bg="whiteAlpha.100" borderColor="whiteAlpha.200" borderWidth="1px">
               <Card.Body>
                 <Stack gap={3}>
-                  <Heading size="md">How this maps to the real product</Heading>
-                  <Text color="gray.300">Later, this local queue can be swapped for Supabase, SMS notifications, and a real staff login with almost the same UI structure.</Text>
+                  <Heading size="md">Demo architecture</Heading>
+                  <Text color="gray.300">The app now reads and writes to the `restaurant_queue` schema in the shared demo database.</Text>
                 </Stack>
               </Card.Body>
             </Card.Root>
@@ -235,8 +290,7 @@ export function QueueApp() {
                     <Text color="gray.600">Monitor the live line, add walk-ins, seat guests, or clear entries.</Text>
                   </Stack>
                   <HStack align="stretch">
-                    <Button variant="outline" onClick={() => updateQueue(seedQueue)}>Reset demo data</Button>
-                    <Button colorPalette="red" variant="subtle" onClick={() => updateQueue([])}>Clear all</Button>
+                    <Button variant="outline" onClick={fetchQueue}>Refresh</Button>
                   </HStack>
                 </Flex>
 
@@ -279,7 +333,9 @@ export function QueueApp() {
                               <Badge colorPalette={entry.source === "qr" ? "purple" : "orange"}>{entry.source}</Badge>
                             </Table.Cell>
                             <Table.Cell>
-                              <Badge colorPalette={entry.status === "waiting" ? "blue" : "green"}>{entry.status}</Badge>
+                              <Badge colorPalette={entry.status === "waiting" ? "blue" : entry.status === "seated" ? "green" : "red"}>
+                                {entry.status}
+                              </Badge>
                             </Table.Cell>
                             <Table.Cell>
                               <HStack justify="flex-end">
