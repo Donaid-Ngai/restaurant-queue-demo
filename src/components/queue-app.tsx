@@ -317,7 +317,7 @@ export function QueueApp() {
                 <Stack gap={4}>
                   <Heading size="md">Current queue</Heading>
                   <Box overflowX="auto" borderWidth="1px" borderColor="gray.200" borderRadius="xl" bg="white">
-                    <Table.Root size="sm" striped interactive>
+                    <Table.Root size="sm" interactive>
                       <Table.Header>
                         <Table.Row bg="gray.50">
                           <Table.ColumnHeader color="gray.700">Name</Table.ColumnHeader>
@@ -332,7 +332,7 @@ export function QueueApp() {
                       </Table.Header>
                       <Table.Body>
                         {queue.map((entry) => (
-                          <Table.Row key={entry.id} bg="white">
+                          <Table.Row key={entry.id} bg="white" _hover={{ bg: "gray.50" }}>
                             <Table.Cell color="gray.900" fontWeight="semibold">{entry.name}</Table.Cell>
                             <Table.Cell color="gray.800">{entry.phone}</Table.Cell>
                             <Table.Cell color="gray.800">{entry.partySize}</Table.Cell>
