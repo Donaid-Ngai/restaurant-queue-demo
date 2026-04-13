@@ -316,28 +316,28 @@ export function QueueApp() {
 
                 <Stack gap={4}>
                   <Heading size="md">Current queue</Heading>
-                  <Box overflowX="auto">
-                    <Table.Root size="sm" striped>
+                  <Box overflowX="auto" borderWidth="1px" borderColor="gray.200" borderRadius="xl" bg="white">
+                    <Table.Root size="sm" striped interactive>
                       <Table.Header>
-                        <Table.Row>
-                          <Table.ColumnHeader>Name</Table.ColumnHeader>
-                          <Table.ColumnHeader>Phone</Table.ColumnHeader>
-                          <Table.ColumnHeader>Party</Table.ColumnHeader>
-                          <Table.ColumnHeader>Joined</Table.ColumnHeader>
-                          <Table.ColumnHeader>Wait</Table.ColumnHeader>
-                          <Table.ColumnHeader>Source</Table.ColumnHeader>
-                          <Table.ColumnHeader>Status</Table.ColumnHeader>
-                          <Table.ColumnHeader textAlign="right">Actions</Table.ColumnHeader>
+                        <Table.Row bg="gray.50">
+                          <Table.ColumnHeader color="gray.700">Name</Table.ColumnHeader>
+                          <Table.ColumnHeader color="gray.700">Phone</Table.ColumnHeader>
+                          <Table.ColumnHeader color="gray.700">Party</Table.ColumnHeader>
+                          <Table.ColumnHeader color="gray.700">Joined</Table.ColumnHeader>
+                          <Table.ColumnHeader color="gray.700">Wait</Table.ColumnHeader>
+                          <Table.ColumnHeader color="gray.700">Source</Table.ColumnHeader>
+                          <Table.ColumnHeader color="gray.700">Status</Table.ColumnHeader>
+                          <Table.ColumnHeader color="gray.700" textAlign="right">Actions</Table.ColumnHeader>
                         </Table.Row>
                       </Table.Header>
                       <Table.Body>
                         {queue.map((entry) => (
-                          <Table.Row key={entry.id}>
-                            <Table.Cell fontWeight="medium">{entry.name}</Table.Cell>
-                            <Table.Cell>{entry.phone}</Table.Cell>
-                            <Table.Cell>{entry.partySize}</Table.Cell>
-                            <Table.Cell>{formatTime(entry.joinedAt)}</Table.Cell>
-                            <Table.Cell>{formatWait(entry.joinedAt)}</Table.Cell>
+                          <Table.Row key={entry.id} bg="white">
+                            <Table.Cell color="gray.900" fontWeight="semibold">{entry.name}</Table.Cell>
+                            <Table.Cell color="gray.800">{entry.phone}</Table.Cell>
+                            <Table.Cell color="gray.800">{entry.partySize}</Table.Cell>
+                            <Table.Cell color="gray.800">{formatTime(entry.joinedAt)}</Table.Cell>
+                            <Table.Cell color="gray.800">{formatWait(entry.joinedAt)}</Table.Cell>
                             <Table.Cell>
                               <Badge colorPalette={entry.source === "qr" ? "purple" : "orange"}>{entry.source}</Badge>
                             </Table.Cell>
