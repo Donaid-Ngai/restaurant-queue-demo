@@ -9,10 +9,11 @@ Prototype restaurant queueing system (guest join + restaurant dashboard).
 - **Supabase**: the database (shared demo project).
   - Schema: `restaurant_queue.queue_entries` (managed by `demo-db-infra`).
   - App reads/writes via **`@supabase/supabase-js`**.
+  - Shared generated DB types are consumed via **`@donaid/demo-db-types`**.
 - **GitHub + Vercel**:
   - Code repo: https://github.com/Donaid-Ngai/restaurant-queue-demo
   - Deployment: https://restaurant-queue-demo.vercel.app
-  - DB infra repo (migrations/types): https://github.com/Donaid-Ngai/demo-db-infra
+  - DB infra repo (migrations/types/package source): https://github.com/Donaid-Ngai/demo-db-infra
 
 ## What it includes
 
@@ -25,6 +26,7 @@ Prototype restaurant queueing system (guest join + restaurant dashboard).
 - Managed by `demo-db-infra` migrations.
 - Table: `restaurant_queue.queue_entries`
 - Status values: `waiting`, `seated`, `removed`
+- TypeScript DB types are sourced from the shared `@donaid/demo-db-types` package, generated from the Supabase-backed infra repo.
 
 ## Supabase env vars
 
@@ -57,4 +59,4 @@ Then open `http://localhost:3000`.
 ## Notes
 
 - This prototype relies on Supabase RLS policies for client-side reads/writes.
-- Next step toward “types source of truth”: wire the app to import the generated Supabase `Database` type from `demo-db-infra` (so TS is 100% schema-driven).
+- Future default: new DB-backed demos should use generated DB types through the shared package flow, not handwritten app-level DB types.

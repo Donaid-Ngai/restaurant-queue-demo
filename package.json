@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@chakra-ui/react": "^3.34.0",
+    "@donaid/demo-db-types": "file:../demo-db-infra",
     "@emotion/react": "^11.14.0",
     "@floating-ui/react": "^0.27.19",
     "@supabase/supabase-js": "^2.103.0",
