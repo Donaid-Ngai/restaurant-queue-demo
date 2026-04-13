@@ -34,7 +34,12 @@ These must be set in the **Vercel project** and in **local development**.
 
 ### Required
 - `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+
+### Optional fallback
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+
+The app prefers `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` and only falls back to `NEXT_PUBLIC_SUPABASE_ANON_KEY` for backward compatibility.
 
 ### Where to set them
 
@@ -44,7 +49,7 @@ Create `.env.local` in this repo (the repo includes `.env.example`).
 #### Vercel
 Vercel → **Project Settings** → **Environment Variables** → add:
 - `NEXT_PUBLIC_SUPABASE_URL` (production)
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` (production)
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (production)
 
 ## Run locally
 
