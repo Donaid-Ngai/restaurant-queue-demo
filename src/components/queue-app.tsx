@@ -15,7 +15,7 @@ import {
   Table,
   Text,
 } from "@chakra-ui/react";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 type QueueStatus = "waiting" | "seated" | "removed";
@@ -139,9 +139,15 @@ export function QueueApp() {
     setIsLoading(false);
   }
 
-  if (supabase && isLoading && queue.length === 0 && !error) {
-    void fetchQueue();
-  }
+  useEffect(() => {
+    if (!supabase) return;
+
+    const run = async () => {
+      await fetchQueue();
+    };
+
+    void run();
+  }, []);
 
   const handleGuestSubmit = async (event: FormEvent) => {
     event.preventDefault();
