@@ -117,7 +117,6 @@ export function QueueApp() {
 
     setIsLoading(true);
     const { data, error: fetchError } = await supabase
-      .schema("restaurant_queue")
       .from("queue_entries")
       .select("id, name, phone, party_size, note, joined_at, status, source")
       .neq("status", "removed")
@@ -157,7 +156,7 @@ export function QueueApp() {
       source: "qr",
     };
 
-    const { error: insertError } = await supabase.schema("restaurant_queue").from("queue_entries").insert(payload);
+    const { error: insertError } = await supabase.from("queue_entries").insert(payload);
 
     if (insertError) {
       setError(insertError.message);
@@ -184,7 +183,7 @@ export function QueueApp() {
       source: "walk-in",
     };
 
-    const { error: insertError } = await supabase.schema("restaurant_queue").from("queue_entries").insert(payload);
+    const { error: insertError } = await supabase.from("queue_entries").insert(payload);
 
     if (insertError) {
       setError(insertError.message);
@@ -200,7 +199,6 @@ export function QueueApp() {
   const markSeated = async (id: string) => {
     if (!supabase) return;
     const { error: updateError } = await supabase
-      .schema("restaurant_queue")
       .from("queue_entries")
       .update({ status: "seated", updated_at: new Date().toISOString() })
       .eq("id", id);
@@ -216,7 +214,6 @@ export function QueueApp() {
   const removeEntry = async (id: string) => {
     if (!supabase) return;
     const { error: updateError } = await supabase
-      .schema("restaurant_queue")
       .from("queue_entries")
       .update({ status: "removed", updated_at: new Date().toISOString() })
       .eq("id", id);

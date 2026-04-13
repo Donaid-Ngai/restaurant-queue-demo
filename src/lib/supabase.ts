@@ -8,5 +8,9 @@ const supabaseKey = supabasePublishableKey ?? supabaseAnonKey;
 
 export const supabase =
   supabaseUrl && supabaseKey
-    ? createClient<Database>(supabaseUrl, supabaseKey)
+    ? createClient<Database>(supabaseUrl, supabaseKey, {
+        db: {
+          schema: "restaurant_queue",
+        },
+      })
     : null;
