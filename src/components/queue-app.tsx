@@ -16,19 +16,22 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import type { Tables, TablesInsert } from "@/lib/database.types";
 import { supabase } from "@/lib/supabase";
 
-type QueueStatus = "waiting" | "seated" | "removed";
-
-type QueueSource = "qr" | "walk-in" | "staff";
+type QueueRow = Tables<{ schema: "restaurant_queue" }, "queue_entries">;
+type QueueInsert = TablesInsert<{ schema: "restaurant_queue" }, "queue_entries">;
+type QueueSelectedRow = Pick<QueueRow, "id" | "name" | "phone" | "party_size" | "note" | "joined_at" | "status" | "source">;
+type QueueStatus = QueueRow["status"];
+type QueueSource = QueueRow["source"];
 
 type QueueEntry = {
-  id: string;
-  name: string;
-  phone: string;
-  partySize: number;
-  note?: string | null;
-  joinedAt: string;
+  id: QueueRow["id"];
+  name: QueueRow["name"];
+  phone: QueueRow["phone"];
+  partySize: QueueRow["party_size"];
+  note?: QueueRow["note"];
+  joinedAt: QueueRow["joined_at"];
   status: QueueStatus;
   source: QueueSource;
 };
@@ -69,16 +72,7 @@ function formatTime(value: string) {
   }).format(new Date(value));
 }
 
-function fromRow(row: {
-  id: string;
-  name: string;
-  phone: string;
-  party_size: number;
-  note: string | null;
-  joined_at: string;
-  status: QueueStatus;
-  source: QueueSource;
-}): QueueEntry {
+function fromRow(row: QueueSelectedRow): QueueEntry {
   return {
     id: row.id,
     name: row.name,
@@ -154,14 +148,16 @@ export function QueueApp() {
     if (!guestName.trim() || !guestPhone.trim()) return;
     if (!supabase) return;
 
-    const { error: insertError } = await supabase.schema("restaurant_queue").from("queue_entries").insert({
+    const payload: QueueInsert = {
       name: guestName.trim(),
       phone: guestPhone.trim(),
       party_size: Number(guestPartySize) || 1,
       note: guestNote.trim() || null,
       status: "waiting",
       source: "qr",
-    });
+    };
+
+    const { error: insertError } = await supabase.schema("restaurant_queue").from("queue_entries").insert(payload);
 
     if (insertError) {
       setError(insertError.message);
@@ -180,13 +176,15 @@ export function QueueApp() {
     if (!staffName.trim() || !staffPhone.trim()) return;
     if (!supabase) return;
 
-    const { error: insertError } = await supabase.schema("restaurant_queue").from("queue_entries").insert({
+    const payload: QueueInsert = {
       name: staffName.trim(),
       phone: staffPhone.trim(),
       party_size: Number(staffPartySize) || 1,
       status: "waiting",
       source: "walk-in",
-    });
+    };
+
+    const { error: insertError } = await supabase.schema("restaurant_queue").from("queue_entries").insert(payload);
 
     if (insertError) {
       setError(insertError.message);
